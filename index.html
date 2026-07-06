@@ -261,10 +261,10 @@
       { id: 'basepair', title: 'Base Pairs', desc: 'The rungs of the ladder. Adenine pairs with Thymine, and Cytosine pairs with Guanine. Your genetic code!', pos: [2.8, 1.4, -3.5], color: 0xc4b5fd, type: 'basepair' },
 
       // Row 2: Cellular Organelles (z: -7.5)
-      { id: 'mitochondria', title: 'Mitochondria', desc: 'Known as the powerhouse of the cell. It takes in nutrients and creates energy-rich molecules.', pos: [-2.8, 1.4, -7.5], color: 0xf97316, type: 'mitochondria' },
-      { id: 'ribosome', title: 'Ribosomes', desc: 'The protein builders of the cell. They connect amino acids together in specific chains to build proteins.', pos: [-1.2, 1.4, -7.5], color: 0x3b82f6, type: 'ribosome' },
-      { id: 'er', title: 'Endoplasmic Reticulum', desc: 'A network of membranes functioning like a manufacturing and packaging system. It helps fold proteins.', pos: [1.2, 1.4, -7.5], color: 0x14b8a6, type: 'er' },
-      { id: 'golgi', title: 'Golgi Apparatus', desc: 'The shipping center. It gathers simple molecules, combines them into complex ones, and packages them.', pos: [2.8, 1.4, -7.5], color: 0x84cc16, type: 'golgi' },
+      { id: 'mitochondria', title: 'Mitochondria', desc: 'Known as the powerhouse of the cell. It takes in nutrients and creates energy-rich molecules.', pos: [-2.8, 1.4, -7.5], color: 0xf97316, type: 'mitochondria', model: 'models/mitochondria.glb', modelScale: 0.4 },
+      { id: 'ribosome', title: 'Ribosomes', desc: 'The protein builders of the cell. They connect amino acids together in specific chains to build proteins.', pos: [-1.2, 1.4, -7.5], color: 0x3b82f6, type: 'ribosome', model: 'models/ribosome.glb', modelScale: 0.4 },
+      { id: 'er', title: 'Endoplasmic Reticulum', desc: 'A network of membranes functioning like a manufacturing and packaging system. It helps fold proteins.', pos: [1.2, 1.4, -7.5], color: 0x14b8a6, type: 'er', model: 'models/er.glb', modelScale: 0.4 },
+      { id: 'golgi', title: 'Golgi Apparatus', desc: 'The shipping center. It gathers simple molecules, combines them into complex ones, and packages them.', pos: [2.8, 1.4, -7.5], color: 0x84cc16, type: 'golgi', model: 'models/golgi.glb', modelScale: 0.4 },
 
       // Row 3: Human Anatomy & Systems (z: -11.5)
       { id: 'heart', title: 'Human Heart', desc: 'A muscular organ that pumps blood through the circulatory system, delivering oxygen and nutrients to your body.', pos: [-2.8, 1.4, -11.5], color: 0xef4444, type: 'heart', model: 'models/heart.glb', modelScale: 0.4 },
@@ -1218,7 +1218,7 @@
               { x: -2.5, z: -11.5 }, { x: 2.5, z: -11.5 }
             ];
 
-            let collision = benches.some(b => nextPos.distanceTo(new THREE.Vector3(b.x, 0, b.z)) < 1.0);
+            let collision = benches.some(b => nextPos.distanceTo(new THREE.Vector3(b.x, 0, b.z)) < 1.5);
 
             if (!collision) {
               userRig.position.copy(nextPos);
