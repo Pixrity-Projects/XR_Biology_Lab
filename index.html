@@ -93,6 +93,115 @@
       box-shadow: none;
       transform: translateX(-50%);
     }
+
+    #loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(26, 26, 46, 0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      transition: opacity 0.6s ease;
+    }
+
+    #loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #loading-overlay .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(78, 205, 196, 0.2);
+      border-top-color: #4ecdc4;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    #loading-overlay .loading-text {
+      color: #f1f5f9;
+      font-size: 14px;
+      margin-top: 16px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    #loading-overlay .loading-detail {
+      color: rgba(241, 245, 249, 0.5);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    /* Background model loading toast */
+    #bg-loading-toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(78, 205, 196, 0.3);
+      border-radius: 12px;
+      padding: 10px 20px;
+      z-index: 1500;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    #bg-loading-toast.hidden {
+      opacity: 0;
+      transform: translateX(-50%) translateY(20px);
+      pointer-events: none;
+    }
+
+    #bg-loading-toast .toast-spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(78, 205, 196, 0.3);
+      border-top-color: #4ecdc4;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    #bg-loading-toast .toast-text {
+      color: #f1f5f9;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    #bg-loading-toast .toast-bar {
+      width: 80px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    #bg-loading-toast .toast-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4ecdc4, #44d1da);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
   </style>
   <script type="importmap">
       {
@@ -117,6 +226,20 @@
 </head>
 
 <body>
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading Lab</div>
+    <div class="loading-detail" id="loading-progress">Preparing environment...</div>
+  </div>
+
+  <div id="bg-loading-toast" class="hidden">
+    <div class="toast-spinner"></div>
+    <div class="toast-text" id="bg-loading-text">Loading HD models...</div>
+    <div class="toast-bar">
+      <div class="toast-bar-fill" id="bg-loading-bar"></div>
+    </div>
+  </div>
+
   <div id="info">
     <strong>XR Biology Lab</strong><br />
     <em>Desktop/Mobile:</em> Drag to rotate, Tap/Click models to learn.<br />
@@ -126,6 +249,8 @@
   <script type="module">
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
     // --- APPLICATION DATA ---
     const HOTSPOTS_DATA = [
@@ -142,16 +267,17 @@
       { id: 'golgi', title: 'Golgi Apparatus', desc: 'The shipping center. It gathers simple molecules, combines them into complex ones, and packages them.', pos: [2.8, 1.4, -7.5], color: 0x84cc16, type: 'golgi' },
 
       // Row 3: Human Anatomy & Systems (z: -11.5)
-      { id: 'heart', title: 'Human Heart', desc: 'A muscular organ that pumps blood through the circulatory system, delivering oxygen and nutrients to your body.', pos: [-2.8, 1.4, -11.5], color: 0xef4444, type: 'heart' },
-      { id: 'brain', title: 'Human Brain', desc: 'The complex organ that controls thought, memory, emotion, touch, motor skills, and regulates our body.', pos: [-1.2, 1.4, -11.5], color: 0xf472b6, type: 'brain' },
-      { id: 'lungs', title: 'The Lungs', desc: 'A pair of spongy, air-filled organs. They bring oxygen into the bloodstream and remove carbon dioxide.', pos: [1.2, 1.4, -11.5], color: 0xfca5a5, type: 'lungs' },
-      { id: 'bone', title: 'Skeletal System', desc: 'Bones provide structure, protect organs, and anchor muscles. This represents a human femur bone.', pos: [2.8, 1.4, -11.5], color: 0xfef08a, type: 'bone' }
+      { id: 'heart', title: 'Human Heart', desc: 'A muscular organ that pumps blood through the circulatory system, delivering oxygen and nutrients to your body.', pos: [-2.8, 1.4, -11.5], color: 0xef4444, type: 'heart', model: 'models/heart.glb', modelScale: 0.4 },
+      { id: 'brain', title: 'Human Brain', desc: 'The complex organ that controls thought, memory, emotion, touch, motor skills, and regulates our body.', pos: [-1.2, 1.4, -11.5], color: 0xf472b6, type: 'brain', model: 'models/brain.glb', modelScale: 0.4 },
+      { id: 'lungs', title: 'The Lungs', desc: 'A pair of spongy, air-filled organs. They bring oxygen into the bloodstream and remove carbon dioxide.', pos: [1.2, 1.4, -11.5], color: 0xfca5a5, type: 'lungs', model: 'models/lungs.glb', modelScale: 0.4 },
+      { id: 'bone', title: 'Skeletal System', desc: 'Bones provide structure, protect organs, and anchor muscles. This represents a human femur bone.', pos: [2.8, 1.4, -11.5], color: 0xfef08a, type: 'bone', model: 'models/bone.glb', modelScale: 0.4 }
     ];
 
     // --- GLOBAL VARIABLES ---
     let camera, scene, renderer, controls;
-    let userRig;
-    let infoPanelMesh, floorMesh;
+    let userRig, headRig;
+    let pitchOffset = 0;
+    let infoPanelMesh, floorMesh, smartboardMesh;
     let currentTextToRead = '';
     const hotspotMeshes = [];
     const controllers = [];
@@ -279,7 +405,7 @@
 
     init();
 
-    function init() {
+    async function init() {
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x1a1a2e);
       scene.fog = new THREE.FogExp2(0x1a1a2e, 0.015);
@@ -288,9 +414,12 @@
       userRig.position.set(0, 0, 2);
       scene.add(userRig);
 
+      headRig = new THREE.Group();
+      userRig.add(headRig);
+
       camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-      camera.position.set(0, 1.6, 0);
-      userRig.add(camera);
+      camera.position.set(0, 1.7, 0);
+      headRig.add(camera);
 
       renderer = new THREE.WebGLRenderer({ antialias: true, xrCompatible: true, logarithmicDepthBuffer: true });
       renderer.setPixelRatio(window.devicePixelRatio);
@@ -308,7 +437,7 @@
 
       setupLighting();
       setupEnvironment();
-      setupHotspots();
+      setupHotspots();  // Instant — procedural models only
       setupInfoPanel();
       setupControllers();
 
@@ -318,7 +447,17 @@
 
       if ('speechSynthesis' in window) window.speechSynthesis.getVoices();
 
+      // Hide loading overlay — scene is ready with procedural models
+      const overlay = document.getElementById('loading-overlay');
+      if (overlay) {
+        overlay.classList.add('hidden');
+        setTimeout(() => overlay.remove(), 600);
+      }
+
       renderer.setAnimationLoop(animate);
+
+      // Start loading HD GLB models in the background
+      lazyLoadGLBModels();
     }
 
     function setupLighting() {
@@ -443,17 +582,27 @@
       createLabBench(2.5, 0, -11.5);
 
       // Smartboard
-      const boardGeo = new THREE.BoxGeometry(10, 4.5, 0.1);
-      const boardMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.5 });
-      const board = new THREE.Mesh(boardGeo, boardMat);
-      board.position.set(0, 3.5, -14.9);
-      scene.add(board);
+      const boardGeo = new THREE.PlaneGeometry(10, 4.5);
+      const boardMat = new THREE.MeshBasicMaterial({ color: 0xf8f1f1 });
+      smartboardMesh = new THREE.Mesh(boardGeo, boardMat);
+      smartboardMesh.position.set(0, 3.5, -14.89);
+      scene.add(smartboardMesh);
+
+      // Board backing (depth)
+      const backGeo = new THREE.BoxGeometry(10, 4.5, 0.1);
+      const backMat = new THREE.MeshStandardMaterial({ color: 0xf8f1f1, roughness: 0.2, metalness: 0.5 });
+      const backing = new THREE.Mesh(backGeo, backMat);
+      backing.position.set(0, 3.5, -14.9);
+      scene.add(backing);
 
       const frameGeo = new THREE.BoxGeometry(10.2, 4.7, 0.05);
       const frameMat = new THREE.MeshBasicMaterial({ color: 0x4ecdc4 });
       const frame = new THREE.Mesh(frameGeo, frameMat);
       frame.position.set(0, 3.5, -14.95);
       scene.add(frame);
+
+      // Render default smartboard content
+      updateSmartboard(null);
     }
 
     function createLabBench(x, y, z) {
@@ -477,13 +626,43 @@
 
 
 
+    // Create a shared GLTF loader with Draco support
+    function createGLTFLoader() {
+      const gltfLoader = new GLTFLoader();
+      const dracoLoader = new DRACOLoader();
+      dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+      dracoLoader.setDecoderConfig({ type: 'js' }); // JS decoder works everywhere
+      gltfLoader.setDRACOLoader(dracoLoader);
+      return gltfLoader;
+    }
+
     function setupHotspots() {
-      HOTSPOTS_DATA.forEach(data => {
+      // Phase 1: Instantly create all hotspots with procedural models
+      // This lets the scene render immediately — no waiting for network.
+      HOTSPOTS_DATA.forEach((data) => {
         const group = new THREE.Group();
         group.position.fromArray(data.pos);
         group.userData = { ...data, baseY: data.pos[1] };
 
+        // Always start with procedural model for instant display
         const model = createBiologicalModel(data.type, data.color);
+
+        // Normalize: bounding box, center, scale to 0.4 to match the brain size
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        if (maxDim > 0) {
+          const targetScale = 0.4 / maxDim;
+          model.scale.setScalar(targetScale);
+          model.userData.baseScale = targetScale;
+          model.position.set(
+            -center.x * targetScale,
+            -center.y * targetScale,
+            -center.z * targetScale
+          );
+        }
+
         group.add(model);
         group.userData.model = model;
 
@@ -504,6 +683,88 @@
 
         scene.add(group);
         hotspotMeshes.push(group);
+      });
+    }
+
+    // Phase 2: Background-load GLB models and swap them in
+    function lazyLoadGLBModels() {
+      const gltfLoader = createGLTFLoader();
+      const modelsToLoad = hotspotMeshes.filter(g => g.userData.model && g.userData.model !== undefined && HOTSPOTS_DATA.find(d => d.id === g.userData.id)?.model);
+
+      if (modelsToLoad.length === 0) return;
+
+      const toast = document.getElementById('bg-loading-toast');
+      const toastText = document.getElementById('bg-loading-text');
+      const toastBar = document.getElementById('bg-loading-bar');
+
+      if (toast) toast.classList.remove('hidden');
+
+      let loaded = 0;
+      const total = modelsToLoad.length;
+
+      modelsToLoad.forEach((group) => {
+        const data = group.userData;
+        const modelPath = HOTSPOTS_DATA.find(d => d.id === data.id)?.model;
+        if (!modelPath) return;
+
+        if (toastText) toastText.textContent = `Loading ${data.title}...`;
+
+        gltfLoader.load(
+          modelPath,
+          // onLoad
+          (gltf) => {
+            const newModel = gltf.scene;
+
+            // Normalize: bounding box, center, scale
+            const box = new THREE.Box3().setFromObject(newModel);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const targetScale = (data.modelScale || 0.4) / maxDim;
+            newModel.scale.setScalar(targetScale);
+            newModel.userData.baseScale = targetScale;
+            newModel.position.set(
+              -center.x * targetScale,
+              -center.y * targetScale,
+              -center.z * targetScale
+            );
+
+            // Remove old procedural model and swap in GLB
+            if (group.userData.model) {
+              group.remove(group.userData.model);
+            }
+            group.add(newModel);
+            group.userData.model = newModel;
+
+            console.log(`Loaded .glb model for: ${data.title}`);
+
+            loaded++;
+            const pct = Math.round((loaded / total) * 100);
+            if (toastBar) toastBar.style.width = pct + '%';
+            if (toastText) toastText.textContent = `Loaded ${loaded}/${total} HD models`;
+
+            if (loaded === total) {
+              // All done — hide toast
+              setTimeout(() => {
+                if (toast) toast.classList.add('hidden');
+              }, 1500);
+            }
+          },
+          // onProgress
+          undefined,
+          // onError
+          (err) => {
+            console.warn(`Failed to load .glb for ${data.title}, keeping procedural:`, err);
+            loaded++;
+            const pct = Math.round((loaded / total) * 100);
+            if (toastBar) toastBar.style.width = pct + '%';
+            if (loaded === total) {
+              setTimeout(() => {
+                if (toast) toast.classList.add('hidden');
+              }, 1500);
+            }
+          }
+        );
       });
     }
 
@@ -607,7 +868,7 @@
         group.add(shaft, end1a, end1b, end2a, end2b);
         group.rotation.z = Math.PI / 4;
       }
-
+      group.userData.baseScale = 1.0;
       return group;
     }
 
@@ -630,10 +891,11 @@
     }
 
     function setupInfoPanel() {
-      const geo = new THREE.PlaneGeometry(1.4, 0.7);
+      const geo = new THREE.PlaneGeometry(9.9, 4.4);
       const mat = new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide });
       infoPanelMesh = new THREE.Mesh(geo, mat);
       infoPanelMesh.visible = false;
+      infoPanelMesh.position.set(0, 3.5, -14.7);
       scene.add(infoPanelMesh);
     }
 
@@ -643,13 +905,14 @@
       for (let i = 0; i < 2; i++) {
         const controller = renderer.xr.getController(i);
         controller.addEventListener('selectstart', onVRSelectStart);
+        controller.addEventListener('squeezestart', onVRSqueezeStart);
 
         const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
         const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
-        line.scale.z = 5;
+        line.scale.z = 4;
         controller.add(line);
 
-        userRig.add(controller);
+        headRig.add(controller);
         controllers.push(controller);
       }
     }
@@ -660,19 +923,18 @@
       raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
       raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
 
-      if (infoPanelMesh.visible) {
-        infoPanelMesh.visible = false;
-        stopSpeaking();
-        return;
-      }
-
       const hitSpheres = hotspotMeshes.map(g => g.userData.hitSphere);
       const hotspotIntersects = raycaster.intersectObjects(hitSpheres, false);
       if (hotspotIntersects.length > 0) {
-        openPanel(hotspotIntersects[0].object.parent.userData);
-        return;
+        selectHotspot(hotspotIntersects[0].object.parent.userData);
+      } else {
+        deselectHotspot();
       }
 
+    }
+
+    function onVRSqueezeStart(event) {
+      deselectHotspot();
     }
 
     const pointerStart = { x: 0, y: 0 };
@@ -698,58 +960,164 @@
         pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
         raycaster.setFromCamera(pointer, camera);
 
-        if (infoPanelMesh.visible) {
-          infoPanelMesh.visible = false;
-          stopSpeaking();
-          return;
-        }
-
         const hitSpheres = hotspotMeshes.map(g => g.userData.hitSphere);
         const intersects = raycaster.intersectObjects(hitSpheres, false);
-        if (intersects.length > 0) openPanel(intersects[0].object.parent.userData);
+        if (intersects.length > 0) {
+          selectHotspot(intersects[0].object.parent.userData);
+        } else {
+          deselectHotspot();
+        }
       }
     }
 
-    function openPanel(data) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1024; canvas.height = 512;
-      const ctx = canvas.getContext('2d');
-
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(0, 0, 1024, 512, 32); else ctx.fillRect(0, 0, 1024, 512);
-      ctx.fill();
-
-      ctx.fillStyle = '#' + data.color.toString(16).padStart(6, '0');
-      ctx.font = 'bold 64px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(data.title, 512, 100);
-
-      ctx.fillStyle = '#e2e8f0'; ctx.font = '40px sans-serif';
-      let line = ''; let y = 220;
-      data.desc.split(' ').forEach(word => {
-        if (ctx.measureText(line + word + ' ').width > 900 && line.length > 0) {
-          ctx.fillText(line, 512, y); line = word + ' '; y += 60;
-        } else line += word + ' ';
-      });
-      ctx.fillText(line, 512, y);
-
-      ctx.fillStyle = '#ef4444'; ctx.font = 'bold 36px sans-serif';
-      ctx.fillText('[ Click anywhere to close ]', 512, 460);
-
-      if (infoPanelMesh.material.map) infoPanelMesh.material.map.dispose();
-      infoPanelMesh.material.map = new THREE.CanvasTexture(canvas);
-      infoPanelMesh.material.map.colorSpace = THREE.SRGBColorSpace;
-      infoPanelMesh.material.needsUpdate = true;
-      infoPanelMesh.visible = true;
-
-      const viewDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-      const camWorldPos = new THREE.Vector3();
-      camera.getWorldPosition(camWorldPos);
-      infoPanelMesh.position.copy(camWorldPos).add(viewDir.multiplyScalar(1.2));
-      infoPanelMesh.position.y += 0.1;
-      infoPanelMesh.quaternion.copy(camera.getWorldQuaternion(new THREE.Quaternion()));
-
+    function selectHotspot(data) {
+      console.log("Selecting hotspot:", data.title); // Debug check
+      updateInfoPanel(data);
       currentTextToRead = `This is the ${data.title}. ${data.desc}`;
       speakText(currentTextToRead);
+    }
+
+    function deselectHotspot() {
+      updateInfoPanel(null);
+      stopSpeaking();
+    }
+
+    function updateSmartboard(data) {
+      if (!smartboardMesh) {
+        console.warn("smartboardMesh is undefined!");
+        return;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 2048;
+      canvas.height = 1024;
+      const ctx = canvas.getContext('2d');
+
+      // Fill background
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, 2048, 1024);
+
+      if (!data) {
+        // Draw grid
+        ctx.strokeStyle = 'rgba(78, 205, 196, 0.15)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 2048; i += 64) {
+          ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1024); ctx.stroke();
+        }
+        for (let j = 0; j < 1024; j += 64) {
+          ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(2048, j); ctx.stroke();
+        }
+
+        ctx.fillStyle = '#4ecdc4';
+        ctx.font = 'bold 100px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('XR BIOLOGY LAB', 1024, 450);
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '40px sans-serif';
+        ctx.fillText('Select a biological model to inspect details', 1024, 580);
+      } else {
+        // Just the background grid, slightly dimmed
+        ctx.strokeStyle = 'rgba(78, 205, 196, 0.08)';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 2048; i += 64) {
+          ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 1024); ctx.stroke();
+        }
+        for (let j = 0; j < 1024; j += 64) {
+          ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(2048, j); ctx.stroke();
+        }
+      }
+
+      // Dispose old texture to prevent memory leaks
+      if (smartboardMesh.material.map) {
+        smartboardMesh.material.map.dispose();
+      }
+
+      // Force texture update
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+
+      // Update the mesh material directly
+      smartboardMesh.material.map = texture;
+      smartboardMesh.material.needsUpdate = true;
+
+      console.log("Smartboard texture updated for:", data ? data.title : "Welcome");
+    }
+
+    function updateInfoPanel(data) {
+      if (!infoPanelMesh) return;
+
+      if (!data) {
+        infoPanelMesh.visible = false;
+        updateSmartboard(null);
+        return;
+      }
+
+      infoPanelMesh.visible = true;
+      updateSmartboard(data); // Puts smartboard in dimmed grid state
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 2048;
+      canvas.height = 921; // 2048 * (3.4 / 7.5) aspect ratio (approx 16:7)
+      const ctx = canvas.getContext('2d');
+
+      // Transparent center, solid slate background panel
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(0, 0, 2048, 921, 48);
+        ctx.fill();
+        // Colored border matching organ's theme
+        ctx.strokeStyle = '#' + data.color.toString(16).padStart(6, '0');
+        ctx.lineWidth = 16;
+        ctx.stroke();
+      } else {
+        ctx.fillRect(0, 0, 2048, 921);
+      }
+
+      // Draw Title
+      ctx.fillStyle = '#' + data.color.toString(16).padStart(6, '0');
+      ctx.font = 'bold 96px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(data.title, 1024, 180);
+
+      // Draw Description with wrapping
+      ctx.fillStyle = '#f1f5f9';
+      ctx.font = '54px sans-serif';
+      const words = data.desc.split(' ');
+      let line = '';
+      const lines = [];
+      const maxWidth = 1800;
+
+      for (let n = 0; n < words.length; n++) {
+        let testLine = line + words[n] + ' ';
+        let metrics = ctx.measureText(testLine);
+        let testWidth = metrics.width;
+        if (testWidth > maxWidth && n > 0) {
+          lines.push(line);
+          line = words[n] + ' ';
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line);
+
+      let y = 360;
+      lines.forEach((l) => {
+        ctx.fillText(l.trim(), 1024, y);
+        y += 80;
+      });
+
+      // Dispose of old texture
+      if (infoPanelMesh.material.map) {
+        infoPanelMesh.material.map.dispose();
+      }
+
+      // Update texture
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      infoPanelMesh.material.map = texture;
+      infoPanelMesh.material.needsUpdate = true;
     }
 
     function speakText(text) {
@@ -773,103 +1141,6 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
-    // function animate(timestamp, frame) {
-    //   const time = performance.now() * 0.002;
-    //   const delta = clock.getDelta();
-
-    //   if (renderer.xr.isPresenting) {
-    //     controls.enabled = false;
-    //     if (frame) {
-    //       const referenceSpace = renderer.xr.getReferenceSpace();
-    //       if (referenceSpace) {
-    //         const pose = frame.getViewerPose(referenceSpace);
-    //         if (pose) {
-    //           camera.matrix.fromArray(pose.transform.matrix);
-    //           camera.matrix.decompose(camera.position, camera.quaternion, camera.scale);
-    //           camera.updateMatrixWorld(true);
-    //         }
-    //       }
-
-    //       const session = renderer.xr.getSession();
-    //       if (session) {
-    //         const speed = 2.5;
-    //         const moveVector = new THREE.Vector3();
-
-    //         session.inputSources.forEach((source, index) => {
-    //           if (source.gamepad && source.gamepad.axes) {
-    //             const axes = source.gamepad.axes;
-    //             let joystickX = 0;
-    //             let joystickY = 0;
-
-    //             if (axes.length >= 4) {
-    //               joystickX = axes[2];
-    //               joystickY = axes[3];
-    //             } else if (axes.length >= 2) {
-    //               joystickX = axes[0];
-    //               joystickY = axes[1];
-    //             }
-
-    //             if (Math.abs(joystickX) > 0.1 || Math.abs(joystickY) > 0.1) {
-    //               const controller = renderer.xr.getController(index);
-    //               if (controller) {
-    //                 const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(controller.quaternion);
-    //                 forward.y = 0;
-    //                 forward.normalize();
-
-    //                 const right = new THREE.Vector3(1, 0, 0).applyQuaternion(controller.quaternion);
-    //                 right.y = 0;
-    //                 right.normalize();
-
-    //                 moveVector.addScaledVector(forward, -joystickY);
-    //                 moveVector.addScaledVector(right, joystickX);
-    //               }
-    //             }
-    //           }
-    //         });
-
-    //         if (moveVector.lengthSq() > 0.001) {
-    //           if (moveVector.lengthSq() > 1.0) {
-    //             moveVector.normalize();
-    //           }
-    //           userRig.position.addScaledVector(moveVector, speed * delta);
-
-    //           userRig.position.x = Math.max(-14, Math.min(14, userRig.position.x));
-    //           userRig.position.z = Math.max(-14, Math.min(14, userRig.position.z));
-    //         }
-    //       }
-    //     }
-    //   } else {
-    //     controls.enabled = true;
-    //   }
-
-    //   hotspotMeshes.forEach((group, i) => {
-    //     group.position.y = group.userData.baseY + Math.sin(time + i) * 0.05;
-    //     if (group.userData.model) {
-    //       if (['heart', 'brain', 'lungs', 'bone'].includes(group.userData.type)) {
-    //         group.userData.model.rotation.y += 0.005;
-    //         if (group.userData.type === 'heart') {
-    //           const scale = 1 + Math.sin(time * 4) * 0.05;
-    //           group.userData.model.scale.set(scale, scale, scale);
-    //         }
-    //         if (group.userData.type === 'lungs') {
-    //           const scale = 1 + Math.sin(time * 2) * 0.04;
-    //           group.userData.model.scale.set(scale, scale, scale);
-    //         }
-    //       } else {
-    //         group.userData.model.rotation.y += 0.01;
-    //         if (group.userData.type === 'dna') group.userData.model.rotation.y += 0.02;
-    //       }
-    //     }
-    //     if (group.userData.label) {
-    //       const camPos = new THREE.Vector3();
-    //       camera.getWorldPosition(camPos);
-    //       group.userData.label.lookAt(camPos);
-    //     }
-    //   });
-
-    //   renderer.render(scene, camera);
-    // }
-
     function animate(timestamp, frame) {
       const time = performance.now() * 0.002;
       const delta = clock.getDelta();
@@ -877,90 +1148,150 @@
       if (renderer.xr.isPresenting) {
         controls.enabled = false;
 
-        // 1. XR Camera Tracking (Handles rotation/head tracking)
+        // 1. XR Camera Tracking (Handles head tracking)
         if (frame) {
           const referenceSpace = renderer.xr.getReferenceSpace();
           const pose = frame.getViewerPose(referenceSpace);
           if (pose) {
             camera.matrix.fromArray(pose.transform.matrix);
             camera.matrix.decompose(camera.position, camera.quaternion, camera.scale);
+
+            // Apply sitting/standing camera angle adjustments + manual pitchOffset rotation around camera's position
+            const basePitch = (1.4 - camera.position.y) * 0.4;
+            const totalPitch = basePitch + pitchOffset;
+
+            const rightRig = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            const pitchQuat = new THREE.Quaternion().setFromAxisAngle(rightRig, totalPitch);
+            headRig.quaternion.copy(pitchQuat);
+            const rotatedCamPos = camera.position.clone().applyQuaternion(pitchQuat);
+            headRig.position.copy(camera.position).sub(rotatedCamPos);
+
             camera.updateMatrixWorld(true);
           }
         }
 
-        // 2. Controller-based Locomotion
+        // 2. Controller-based Locomotion & Rotation
         const session = renderer.xr.getSession();
         if (session) {
           const speed = 2.5;
           const moveVector = new THREE.Vector3();
 
           session.inputSources.forEach((source, index) => {
-            if (source.gamepad && source.gamepad.axes) {
-              const axes = source.gamepad.axes;
-              // Usually axes[2], axes[3] are the joystick
-              const joystickX = axes[2] || 0;
-              const joystickY = axes[3] || 0;
+            if (!source.gamepad || !source.gamepad.axes) return;
 
-              if (Math.abs(joystickX) > 0.1 || Math.abs(joystickY) > 0.1) {
-                const controller = renderer.xr.getController(index);
-                if (controller) {
-                  const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(controller.quaternion);
-                  forward.y = 0;
-                  forward.normalize();
+            const axes = source.gamepad.axes;
+            const handedness = source.handedness; // 'left' or 'right'
 
-                  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(controller.quaternion);
-                  right.y = 0;
-                  right.normalize();
-
-                  moveVector.addScaledVector(forward, -joystickY);
-                  moveVector.addScaledVector(right, joystickX);
-                }
+            // LEFT CONTROLLER: Rotation & Pitch
+            if (handedness === 'left') {
+              if (Math.abs(axes[2]) > 0.1) {
+                userRig.rotation.y -= axes[2] * 1.5 * delta;
               }
+              if (Math.abs(axes[3]) > 0.1) {
+                pitchOffset -= axes[3] * 1.0 * delta;
+                pitchOffset = Math.max(-Math.PI / 6, Math.min(Math.PI / 6, pitchOffset));
+              }
+            }
+
+            // RIGHT CONTROLLER: Movement
+            if (handedness === 'right' && (Math.abs(axes[2]) > 0.1 || Math.abs(axes[3]) > 0.1)) {
+              const forward = new THREE.Vector3(0, 0, -1).transformDirection(camera.matrixWorld);
+              forward.y = 0; forward.normalize();
+
+              const right = new THREE.Vector3(1, 0, 0).transformDirection(camera.matrixWorld);
+              right.y = 0; right.normalize();
+
+              moveVector.addScaledVector(forward, -axes[3]);
+              moveVector.addScaledVector(right, axes[2]);
             }
           });
 
-          // Apply movement to the container (userRig)
+          // Collision & Movement
           if (moveVector.lengthSq() > 0.001) {
             moveVector.normalize().multiplyScalar(speed * delta);
-            userRig.position.add(moveVector);
+            const nextPos = userRig.position.clone().add(moveVector);
+
+            // Lower the collision threshold to 1.0 (2.0 was likely blocking your movement)
+            const benches = [
+              { x: -2.5, z: -3.5 }, { x: 2.5, z: -3.5 },
+              { x: -2.5, z: -7.5 }, { x: 2.5, z: -7.5 },
+              { x: -2.5, z: -11.5 }, { x: 2.5, z: -11.5 }
+            ];
+
+            let collision = benches.some(b => nextPos.distanceTo(new THREE.Vector3(b.x, 0, b.z)) < 1.0);
+
+            if (!collision) {
+              userRig.position.copy(nextPos);
+            }
 
             // Lab boundaries
             userRig.position.x = Math.max(-14, Math.min(14, userRig.position.x));
             userRig.position.z = Math.max(-14, Math.min(14, userRig.position.z));
           }
         }
-      } else {
-        controls.enabled = true;
-      }
 
-      // 3. Model Animations & Labels
-      hotspotMeshes.forEach((group, i) => {
-        group.position.y = group.userData.baseY + Math.sin(time + i) * 0.05;
-        if (group.userData.model) {
-          if (['heart', 'brain', 'lungs', 'bone'].includes(group.userData.type)) {
-            group.userData.model.rotation.y += 0.005;
-            if (group.userData.type === 'heart') {
-              const scale = 1 + Math.sin(time * 4) * 0.05;
-              group.userData.model.scale.set(scale, scale, scale);
+        // 3. Model Animations & Labels
+        hotspotMeshes.forEach((group, i) => {
+          group.position.y = group.userData.baseY + Math.sin(time + i) * 0.05;
+          if (group.userData.model) {
+            if (['heart', 'brain', 'lungs', 'bone'].includes(group.userData.type)) {
+              group.userData.model.rotation.y += 0.005;
+              const baseScale = group.userData.model.userData.baseScale || 1.0;
+              if (group.userData.type === 'heart') {
+                const s = baseScale * (1 + Math.sin(time * 4) * 0.05);
+                group.userData.model.scale.set(s, s, s);
+              }
+              if (group.userData.type === 'lungs') {
+                const s = baseScale * (1 + Math.sin(time * 2) * 0.04);
+                group.userData.model.scale.set(s, s, s);
+              }
+            } else {
+              group.userData.model.rotation.y += 0.01;
+              if (group.userData.type === 'dna') group.userData.model.rotation.y += 0.02;
             }
-            if (group.userData.type === 'lungs') {
-              const scale = 1 + Math.sin(time * 2) * 0.04;
-              group.userData.model.scale.set(scale, scale, scale);
-            }
-          } else {
-            group.userData.model.rotation.y += 0.01;
-            if (group.userData.type === 'dna') group.userData.model.rotation.y += 0.02;
           }
-        }
-        if (group.userData.label) {
-          const camPos = new THREE.Vector3();
-          camera.getWorldPosition(camPos);
-          group.userData.label.lookAt(camPos);
-        }
-      });
+          if (group.userData.label) {
+            const camPos = new THREE.Vector3();
+            camera.getWorldPosition(camPos);
+            group.userData.label.lookAt(camPos);
+          }
+        });
 
-      renderer.render(scene, camera);
-    }    
+        renderer.render(scene, camera);
+      } else {
+        // Desktop / non-VR mode
+        controls.enabled = true;
+
+        // Model Animations & Labels
+        hotspotMeshes.forEach((group, i) => {
+          group.position.y = group.userData.baseY + Math.sin(time + i) * 0.05;
+          if (group.userData.model) {
+            if (['heart', 'brain', 'lungs', 'bone'].includes(group.userData.type)) {
+              group.userData.model.rotation.y += 0.005;
+              const baseScale = group.userData.model.userData.baseScale || 1.0;
+              if (group.userData.type === 'heart') {
+                const s = baseScale * (1 + Math.sin(time * 4) * 0.05);
+                group.userData.model.scale.set(s, s, s);
+              }
+              if (group.userData.type === 'lungs') {
+                const s = baseScale * (1 + Math.sin(time * 2) * 0.04);
+                group.userData.model.scale.set(s, s, s);
+              }
+            } else {
+              group.userData.model.rotation.y += 0.01;
+              if (group.userData.type === 'dna') group.userData.model.rotation.y += 0.02;
+            }
+          }
+          if (group.userData.label) {
+            const camPos = new THREE.Vector3();
+            camera.getWorldPosition(camPos);
+            group.userData.label.lookAt(camPos);
+          }
+        });
+
+        renderer.render(scene, camera);
+      }
+    }
   </script>
 </body>
 
