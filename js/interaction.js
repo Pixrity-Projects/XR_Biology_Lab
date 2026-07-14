@@ -67,10 +67,10 @@ export function getGripMidpointDistanceToCamera() {
   state.grippedControllers[0].getWorldPosition(p1);
   const p2 = new THREE.Vector3();
   state.grippedControllers[1].getWorldPosition(p2);
-  
+
   const camPos = new THREE.Vector3();
   state.camera.getWorldPosition(camPos);
-  
+
   const midpoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
   return camPos.distanceTo(midpoint);
 }
@@ -90,9 +90,9 @@ export function onVRSqueezeStart(event) {
     }
 
     const poppedModel = hitData.model.clone();
-    
+
     // Position slightly above and in front of the hand
-    poppedModel.position.set(0, 0.1, -0.2);
+    poppedModel.position.set(0, 0.1, -0.3);
     poppedModel.rotation.set(0, 0, 0);
 
     // Scale to comfortable popped size
@@ -137,7 +137,7 @@ export function onVRSqueezeEnd(event) {
         }
       }
     });
-    
+
     // Clear global poppedModel reference if it matches this one
     if (state.poppedModel === poppedModel) {
       const otherController = state.controllers.find(c => c !== controller);

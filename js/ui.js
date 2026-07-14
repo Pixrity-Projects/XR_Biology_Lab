@@ -147,3 +147,27 @@ export function updateInfoPanel(data) {
   state.infoPanelMesh.material.map = texture;
   state.infoPanelMesh.material.needsUpdate = true;
 }
+
+export function createManualTexture() {
+  const canvas = document.getElementById('controlsCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // Clear and style
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.fillRect(0, 0, 512, 256);
+  ctx.fillStyle = 'white';
+  ctx.font = '24px Arial';
+
+  // Draw text
+  ctx.fillText('VR CONTROLS', 20, 40);
+  ctx.font = '18px Arial';
+  ctx.fillText('Locomotion: Right Joystick', 20, 80);
+  ctx.fillText('Select: Trigger', 20, 110);
+  ctx.fillText('Inspect: Grip (Hold)', 20, 140);
+  ctx.fillText('Toggle Manual: A Button', 20, 170);
+  ctx.fillText('Deselect: B / Y Button', 20, 200);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}

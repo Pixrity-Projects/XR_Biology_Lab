@@ -28,6 +28,7 @@ export const state = {
   // Pop-up and zoom state
   selectedHotspot: null,
   prevBButtonPressed: [false, false],
+  prevAButtonPressed: false,
   grippedControllers: [],
   poppedModel: null,
   initialZoomDistance: 0,

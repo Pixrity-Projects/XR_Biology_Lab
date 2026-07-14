@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { state } from './state.js';
 import { setupLighting, setupEnvironment } from './environment.js';
 import { setupHotspots, lazyLoadGLBModels } from './models.js';
-import { setupInfoPanel } from './ui.js';
+import { setupInfoPanel, createManualTexture } from './ui.js';
 import { setupControllers, onPointerDown, onPointerUp, deselectHotspot, getGripMidpointDistanceToCamera, updateControllerRayColors } from './interaction.js';
 
 // --- XR BUTTON UTILITY ---
@@ -160,6 +160,29 @@ export async function init() {
   setupInfoPanel();
   setupControllers();
 
+  // Create 3D controls manual plane
+  const manualTex = createManualTexture();
+  const manualGeo = new THREE.PlaneGeometry(0.5, 0.25);
+  const manualMat = new THREE.MeshBasicMaterial({
+    map: manualTex,
+    transparent: true,
+    side: THREE.DoubleSide
+  });
+  const manualPlane = new THREE.Mesh(manualGeo, manualMat);
+  manualPlane.name = 'controlsManual';
+  manualPlane.position.set(0, 0, -0.6);
+  manualPlane.rotation.x = -0.2;
+  manualPlane.visible = true; // Initial visibility set to true
+  state.camera.add(manualPlane);
+
+  // Toggle visibility of controls manual based on WebXR session state
+  state.renderer.xr.addEventListener('sessionstart', () => {
+    manualPlane.visible = true;
+  });
+  state.renderer.xr.addEventListener('sessionend', () => {
+    manualPlane.visible = false;
+  });
+
   window.addEventListener('pointerdown', onPointerDown);
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('resize', onWindowResize);
@@ -231,6 +254,18 @@ function animate(timestamp, frame) {
             deselectHotspot();
           }
           state.prevBButtonPressed[index] = isPressed;
+        }
+
+        // Read A button (button index 4 on Quest/Oculus Right controller)
+        if (source.handedness === 'right' && source.gamepad && source.gamepad.buttons && source.gamepad.buttons[4]) {
+          const isPressed = source.gamepad.buttons[4].pressed;
+          if (isPressed && !state.prevAButtonPressed) {
+            const manualPlane = state.camera.getObjectByName('controlsManual');
+            if (manualPlane) {
+              manualPlane.visible = !manualPlane.visible;
+            }
+          }
+          state.prevAButtonPressed = isPressed;
         }
 
         if (!source.gamepad || !source.gamepad.axes) return;
@@ -336,6 +371,12 @@ function animate(timestamp, frame) {
   } else {
     // Desktop / non-VR mode
     state.controls.enabled = true;
+
+    // Hide controls manual plane in desktop mode to avoid blocking the viewport
+    const manualPlane = state.camera.getObjectByName('controlsManual');
+    if (manualPlane) {
+      manualPlane.visible = false;
+    }
 
     // Model Animations & Labels
     state.hotspotMeshes.forEach((group, i) => {
