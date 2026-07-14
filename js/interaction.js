@@ -20,6 +20,7 @@ export function setupControllers() {
     const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
     const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
     line.scale.z = 4;
+    line.name = 'raycasterLine';
     controller.add(line);
 
     state.headRig.add(controller);
@@ -38,6 +39,16 @@ export function getControllerRaycastIntersection(controller) {
     return intersects[0].object.parent.userData;
   }
   return null;
+}
+
+export function updateControllerRayColors() {
+  state.controllers.forEach(controller => {
+    const hitData = getControllerRaycastIntersection(controller);
+    const line = controller.getObjectByName('raycasterLine');
+    if (line) {
+      line.material.color.setHex(hitData ? 0x00ffff : 0xffffff);
+    }
+  });
 }
 
 export function onVRSelectStart(event) {
@@ -110,10 +121,25 @@ export function onVRSqueezeEnd(event) {
   state.grippedControllers = state.grippedControllers.filter(c => c !== controller);
 
   if (controller.userData.poppedModel) {
-    controller.remove(controller.userData.poppedModel);
+    const poppedModel = controller.userData.poppedModel;
+    controller.remove(poppedModel);
+
+    // Traverse and dispose of geometry & material to prevent GPU memory leaks
+    poppedModel.traverse((node) => {
+      if (node.isMesh) {
+        if (node.geometry) node.geometry.dispose();
+        if (node.material) {
+          if (Array.isArray(node.material)) {
+            node.material.forEach((mat) => mat.dispose());
+          } else {
+            node.material.dispose();
+          }
+        }
+      }
+    });
     
     // Clear global poppedModel reference if it matches this one
-    if (state.poppedModel === controller.userData.poppedModel) {
+    if (state.poppedModel === poppedModel) {
       const otherController = state.controllers.find(c => c !== controller);
       if (otherController && otherController.userData.poppedModel) {
         state.poppedModel = otherController.userData.poppedModel;
@@ -170,16 +196,6 @@ export function deselectHotspot() {
   state.selectedHotspot = null;
   updateInfoPanel(null);
   stopSpeaking();
-  
-  // Clean up popped models from all controllers
-  state.controllers.forEach(controller => {
-    if (controller.userData.poppedModel) {
-      controller.remove(controller.userData.poppedModel);
-      controller.userData.poppedModel = null;
-    }
-  });
-  state.poppedModel = null;
-  state.grippedControllers = [];
 }
 
 export function speakText(text) {

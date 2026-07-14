@@ -4,7 +4,7 @@ import { state } from './state.js';
 import { setupLighting, setupEnvironment } from './environment.js';
 import { setupHotspots, lazyLoadGLBModels } from './models.js';
 import { setupInfoPanel } from './ui.js';
-import { setupControllers, onPointerDown, onPointerUp, deselectHotspot, getGripMidpointDistanceToCamera } from './interaction.js';
+import { setupControllers, onPointerDown, onPointerUp, deselectHotspot, getGripMidpointDistanceToCamera, updateControllerRayColors } from './interaction.js';
 
 // --- XR BUTTON UTILITY ---
 const XRButton = {
@@ -140,7 +140,7 @@ export async function init() {
   state.camera.position.set(0, 1.7, 0);
   state.headRig.add(state.camera);
 
-  state.renderer = new THREE.WebGLRenderer({ antialias: true, xrCompatible: true, logarithmicDepthBuffer: true });
+  state.renderer = new THREE.WebGLRenderer({ antialias: true, xrCompatible: true, logarithmicDepthBuffer: false });
   state.renderer.setPixelRatio(window.devicePixelRatio);
   state.renderer.setSize(window.innerWidth, window.innerHeight);
   state.renderer.xr.enabled = true;
@@ -192,6 +192,9 @@ function animate(timestamp, frame) {
   if (state.renderer.xr.isPresenting) {
     state.controls.enabled = false;
 
+    // Update raycaster visual states (color affordance)
+    updateControllerRayColors();
+
     // 1. XR Camera Tracking (Handles head tracking)
     if (frame) {
       const referenceSpace = state.renderer.xr.getReferenceSpace();
@@ -235,25 +238,15 @@ function animate(timestamp, frame) {
         const axes = source.gamepad.axes;
         const handedness = source.handedness; // 'left' or 'right'
 
-        // LEFT CONTROLLER: Rotation & Pitch (redirected to model rotation when model is gripped)
+        // LEFT CONTROLLER: Rotation & Pitch (Standard locomotion rotation)
         if (handedness === 'left') {
-          if (state.poppedModel) {
-            // Rotate the gripped model instead of the user rig
-            if (Math.abs(axes[2]) > 0.1) {
-              state.poppedModel.rotation.y += axes[2] * 2.0 * delta;
-            }
-            if (Math.abs(axes[3]) > 0.1) {
-              state.poppedModel.rotation.x += axes[3] * 2.0 * delta;
-            }
-          } else {
-            // Standard locomotion rotation
-            if (Math.abs(axes[2]) > 0.1) {
-              state.userRig.rotation.y -= axes[2] * 1.5 * delta;
-            }
-            if (Math.abs(axes[3]) > 0.1) {
-              state.pitchOffset -= axes[3] * 1.0 * delta;
-              state.pitchOffset = Math.max(-Math.PI / 6, Math.min(Math.PI / 6, state.pitchOffset));
-            }
+          // Standard locomotion rotation (model rotation via joystick removed)
+          if (Math.abs(axes[2]) > 0.1) {
+            state.userRig.rotation.y -= axes[2] * 1.5 * delta;
+          }
+          if (Math.abs(axes[3]) > 0.1) {
+            state.pitchOffset -= axes[3] * 1.0 * delta;
+            state.pitchOffset = Math.max(-Math.PI / 6, Math.min(Math.PI / 6, state.pitchOffset));
           }
         }
 
