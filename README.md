@@ -1,219 +1,94 @@
 # Vibe Coded XR Biology Lab
 
-A Virtual Reality Biology Lab built using **Gemini XR Blocks** and **Three.js**, demonstrating prompt-driven XR development and procedural spatial design.
-
-This project explores how AI-assisted workflows can accelerate XR prototyping while reducing traditional complexity from game engines and asset pipelines.
+An interactive Virtual Reality Biology Lab built using **Gemini XR Blocks** and **Three.js**, showcasing modular ES6 spatial architecture, decoupled hand-locked inspection mechanics, and direct visual raycaster feedback.
 
 ---
-
-## Project Overview
-
-This experiment demonstrates how a complete XR learning environment can be generated from a single structured prompt using Gemini.
-
-The lab allows users to:
-
-- Walk around a virtual biology laboratory in VR
-- Interact with DNA and cell structures
-- Explore human organs
-- Trigger contextual learning tooltips
-- Hear educational explanations using text-to-speech
-- Navigate using VR teleportation
-- Experience a fully procedural 3D environment
-
----
-
 ## Demo Video
 
-Watch the XR Biology Lab in action:
 
-https://youtube.com/shorts/hLqXIe8XTCc?si=dADIT-BOIddpYLZy
+## Features & Current Working
 
-This demo shows:
-- VR navigation
-- Procedural biology models
-- Interaction tooltips
+The lab allows users to explore genetics, cell structures, and human anatomy with decoupled controls and a head-locked controls helper:
 
----
+### 1. Decoupled VR Controls
+- **Trigger Button (Select)**: Pulling the trigger on a hotspot selects it, displaying its details on the smartboard at the front of the lab and playing educational text-to-speech description.
+- **Grip Button (Grip to Inspect)**: Squeezing the grip button on a controller pointing to any hotspot immediately clones its high-definition model and parents it directly to that controller (`controller.add(poppedModel)`). The model remains locked to the hand, following its physical position and rotation smoothly.
+- **Deselect Safety**: Deselecting a hotspot (by pressing the B/Y button or clicking away) does *not* clear held models; they remain in the user's hand until they release the physical Grip button.
+- **Locomotion**: Continuous joystick-based movement moves the entire player rig (`playerRig` Group containing the camera and controllers) rather than modifying the camera directly, ensuring ergonomic VR locomotion.
 
-## Features
+### 2. Visual Raycaster Feedback (Affordance)
+- The controller raycaster line dynamically detects hotspots.
+- When pointing directly at a valid hotspot sphere, the line changes color to **Cyan** (`0x00FFFF`).
+- When pointing away, it turns back to **White** (`0xFFFFFF`).
 
-- WebXR VR navigation
-- Procedural 3D model generation
-- Interactive learning hotspots
-- Tooltip information panels
-- Native text-to-speech integration
-- Realistic lighting and shadows
-- Modern lab environment design
-- No external asset dependencies
-- Modular ES6 architecture
-- 3D inspection pop-up on Grip hold
-- Push/pull zoom mechanics on dual Grip hold
-- B/Y button quick deselect
+### 3. Persistent 3D Controls Manual
+- A head-locked controls manual plane is attached directly to the camera view (`(0, 0, -0.6)` offset, tilted slightly downwards at `x: -0.2` for ergonomic comfort).
+- The manual remains in view during VR.
+- Pressing the **A button** on the right controller debounces and toggles the manual's visibility.
+- The manual is automatically hidden when in desktop mode to avoid blocking the viewport.
 
----
-
-## Technologies Used
-
-- Three.js
-- WebXR API
-- JavaScript
-- Gemini XR Blocks
-- Procedural Geometry
-- Browser Text-to-Speech API
+### 4. VR Composition & Memory Optimizations
+- Confugured with `logarithmicDepthBuffer: false` to ensure maximum stability and compatibility with WebXR compositor engines.
+- Built-in automatic resource disposal: releasing the Grip button disposes of the cloned model's meshes, geometries, and materials, preventing GPU memory leaks.
 
 ---
 
-## Architecture Approach
+## Installation
 
-The project uses a **modular ES6 module architecture** to structure educational and spatial features:
+Ensure you have [Node.js](https://nodejs.org/) installed, then follow these steps:
 
-- **index.html**: Serves structural markup, overlay styling, and initializes the app.
-- **js/data.js**: Contains hotspots and description labels data.
-- **js/state.js**: Centralized namespace state container for Three.js scene, camera, and active selections.
-- **js/textures.js**: Generates procedural bench, room, and dashboard textures.
-- **js/environment.js**: Organizes room bounds, lighting setup, and lab furniture placements.
-- **js/models.js**: Renders fallback procedural objects and background-loads high-definition GLB models.
-- **js/ui.js**: Manages interactive 3D overlays and smartboard canvas updates.
-- **js/interaction.js**: Handles raycast clicks, VR controllers events, SpeechSynthesis, and custom inspect/zoom holding gestures.
-- **js/app.js**: Assembles the WebGL context and drives the animation tick loop.
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/sachin-paranjape/XRBioLab.git
+   cd XRBioLab
+   ```
 
-This structure facilitates easy iteration on individual components without the need for build tooling.
-
----
-## Challenges Encountered
-
-Some interesting challenges during development included:
-
-- Balancing lighting realism with performance in a procedural scene
-- Making tooltips readable inside VR space
-- Designing interaction targets large enough for XR selection
-- Structuring procedural models to remain recognizable
-- Refactoring the monolithic file into modular ES6 scripts without breaking WebXR/Three.js state tracking
-- Overcoming Windows Node.js IPv6 resolution lookup bugs when spawning local tunnel connections
-
-These challenges helped shape the final architecture decisions.
----
-
-## The Prompt That Built This Project
-
-This project was generated from the following structured XR prompt:
-
-The full prompt used for this project is available in [docs/prompt.md](docs/prompt.md).
-This prompt was designed to explore prompt-driven XR development using procedural generation, browser-native interaction, and educational spatial design.
----
-
-## Screenshots
-
-### XR Lab Environment
-
-![XR Lab] <img width="2559" height="1510" alt="Gemini_Generated_Image_jydtv1jydtv1jydt" src="https://github.com/user-attachments/assets/6038a4ac-e373-4f13-8e9b-8316e2a85666" />
-
-
-### DNA Model Interaction
-
-![DNA] <img width="2559" height="1421" alt="Gemini_Generated_Image_12m5or12m5or12m5" src="https://github.com/user-attachments/assets/fb716440-6ae9-4015-98e8-27d29c97c3d4" />
-
-
-### Tooltip System
-
-![Tooltip] <img width="2515" height="1430" alt="Gemini_Generated_Image_qop3lpqop3lpqop3" src="https://github.com/user-attachments/assets/1ff5c040-6dd8-484f-9964-fb690bb7fa88" />
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
 ---
 
-## How to Run
+## Running the Project
 
-Because the project runs on native ES6 modules, it must be hosted on an HTTP server (loading via `file://` directly is blocked by browser security policies).
+Because WebXR requires a secure context (HTTPS) or local loopback (`localhost`), follow these steps to host and run the lab:
 
-### 1. Start a Local Server
-Host the directory using a web server:
-
-**Using Node:**
+### 1. Start the HTTP Server
+Run the local HTTP server to serve the static assets:
 ```bash
-npx http-server -p 8000
+npx http-server -c-1 -p 8000
 ```
 
-**Using Python:**
-```bash
-python -m http.server 8000
-```
-
-### 2. Connect in VR (Secure Context)
-To access WebXR, a secure context (HTTPS) or local loopback is required. You can expose your local server over a secure public tunnel:
-
-**Using the spawn script (forces IPv4 DNS resolution):**
+### 2. Expose over a Secure Tunnel (WebXR Requirement)
+For VR headsets (e.g., Meta Quest Browser) to access the page, it must be loaded over HTTPS. Run the tunnel script, which starts Tunnelmole and bypasses DNS resolution issues:
 ```bash
 node --dns-result-order=ipv4first run_tunnel_spawn.js
 ```
-This spawns Tunnelmole, outputs a secure HTTPS public URL (e.g. `https://xxxx.tunnelmole.net`), and writes it to `tunnel_url.txt`. 
+This script will:
+- Establish a secure public tunnel to port `8000`.
+- Output a secure public URL (e.g., `https://xxxx.tunnelmole.net`).
+- Save the URL to `tunnel_url.txt`.
 
-Open this HTTPS URL in your WebXR compatible browser (e.g. Meta Quest Browser) and select **Enter VR**.
-
----
-
-## Learning Goals
-
-This project explores:
-
-- Prompt-driven XR development
-- AI-assisted spatial workflows
-- Lightweight XR architecture
-- Procedural modeling strategies
-- Educational XR interaction design
+### 3. View in VR
+1. Open the secure HTTPS URL in a WebXR-compatible browser (e.g., Meta Quest Browser, or Google Chrome with the WebXR API Emulator extension).
+2. Click the **Enter VR** button at the bottom of the page.
 
 ---
 
-## Key Lessons
+## Repository Structure
 
-Some important observations from this experiment:
-
-- AI can dramatically reduce XR prototyping time
-- Procedural generation improves reliability for browser XR apps
-- Interaction design matters more than visual complexity
-- Lightweight XR experiences are possible without game engines
-- Prompt structure affects spatial design outcomes
-
-This project reinforced the idea that XR development may shift toward prompt-driven workflows.
-
----
-
-## Future Improvements
-
-Potential upgrades include:
-
-- Multi-user XR sessions
-- Gesture interaction
-- Hand tracking
-- Physics simulation
-- More biology models
-- Android XR optimization
-- Material 3 spatial UI refinements
-
----
-
-## Why This Project Exists
-
-XR development traditionally requires heavy tooling and long iteration cycles.
-
-This project explores a different question:
-
-**Can XR experiences be rapidly prototyped using AI and web technologies instead of game engines?**
-
----
-
-## Author
-
-Awodi Abdulmujeeb A.
-
-XR Developer | Android XR Explorer | AI Spatial Computing
-
-GitHub:
-https://github.com/Platinum04
-
-LinkedIn:
-https://www.linkedin.com/in/awodi/
+- **index.html**: Initializes structural overlays, the hidden manual canvas, and loads the Three.js runtime.
+- **js/app.js**: Initializes the WebGL context, OrbitControls, user rigs, camera parent relationships, and drives the rendering loop (`setAnimationLoop`).
+- **js/data.js**: Stores hotspot coordinate positions, description labels, and model path references.
+- **js/state.js**: Centralized namespace for global Three.js objects and controller debouncing parameters.
+- **js/ui.js**: Manages smartboard rendering, info panels, and generating the controls manual text canvas.
+- **js/interaction.js**: Handles event listeners for trigger selects, grip inspects, controller connection events, raycasting calculations, and GPU memory cleanup.
+- **js/textures.js**: Generates procedural materials and patterns.
+- **js/environment.js**: Builds room geometry, point lighting, and bench furniture.
 
 ---
 
 ## License
 
-MIT License
+This project is licensed under the MIT License.
