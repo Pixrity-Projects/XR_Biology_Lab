@@ -13,7 +13,6 @@ export function setupControllers() {
     const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
     line.scale.z = 4;
     controller.add(line);
-    controller.userData.rayLine = line;
 
     state.headRig.add(controller);
     state.controllers.push(controller);
@@ -35,47 +34,62 @@ export function onVRSelectStart(event) {
   }
 }
 
+export function getGripMidpointDistanceToCamera() {
+  if (state.grippedControllers.length < 2) return 0;
+  const p1 = new THREE.Vector3();
+  state.grippedControllers[0].getWorldPosition(p1);
+  const p2 = new THREE.Vector3();
+  state.grippedControllers[1].getWorldPosition(p2);
+  
+  const camPos = new THREE.Vector3();
+  state.camera.getWorldPosition(camPos);
+  
+  const midpoint = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+  return camPos.distanceTo(midpoint);
+}
+
 export function onVRSqueezeStart(event) {
   const controller = event.target;
-  
-  // Set up raycaster from this controller
-  state.tempMatrix.identity().extractRotation(controller.matrixWorld);
-  state.raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-  state.raycaster.ray.direction.set(0, 0, -1).applyMatrix4(state.tempMatrix);
+  if (!state.grippedControllers.includes(controller)) {
+    state.grippedControllers.push(controller);
+  }
 
-  // Check if we hit any hotspot hit spheres
-  const hitSpheres = state.hotspotMeshes.map(g => g.userData.hitSphere);
-  const intersects = state.raycaster.intersectObjects(hitSpheres, false);
-  
-  if (intersects.length > 0) {
-    const hotspotGroup = intersects[0].object.parent;
-    if (hotspotGroup && hotspotGroup.userData.model) {
-      // Remove any existing grabbed model on this controller
-      if (controller.userData.grabbedModel) {
-        controller.remove(controller.userData.grabbedModel);
+  // If a hotspot is selected, spawn the pop-up model
+  if (state.selectedHotspot && state.selectedHotspot.model) {
+    if (state.grippedControllers.length === 1) {
+      if (state.poppedModel) {
+        state.camera.remove(state.poppedModel);
+        state.poppedModel = null;
       }
 
-      // Clone and attach model to controller
-      const modelToGrab = hotspotGroup.userData.model;
-      const cloned = modelToGrab.clone();
-      cloned.position.set(0, 0, -0.6); // 0.6m directly in front of the controller
-      cloned.rotation.set(0, 0, 0);
+      state.poppedModel = state.selectedHotspot.model.clone();
+      state.poppedModel.position.set(0, 0, -0.6); // 0.6m directly in front of the camera
+      state.poppedModel.rotation.set(0, 0, 0);
 
-      const baseScale = modelToGrab.userData.baseScale || 1.0;
-      cloned.scale.setScalar(baseScale * 1.5);
-      cloned.userData.baseScale = baseScale * 1.5;
+      // Scale model to a comfortable pop-up size
+      const baseScale = state.selectedHotspot.model.userData.baseScale || 1.0;
+      const targetScale = baseScale * 1.5;
+      state.poppedModel.scale.setScalar(targetScale);
+      state.poppedModel.userData.baseScale = targetScale;
 
-      controller.add(cloned);
-      controller.userData.grabbedModel = cloned;
+      state.camera.add(state.poppedModel);
+    } else if (state.grippedControllers.length === 2 && state.poppedModel) {
+      // Both grips held: enter zoom tracking mode
+      state.initialZoomDistance = getGripMidpointDistanceToCamera();
+      state.initialPoppedScale = state.poppedModel.scale.x;
     }
   }
 }
 
 export function onVRSqueezeEnd(event) {
   const controller = event.target;
-  if (controller.userData.grabbedModel) {
-    controller.remove(controller.userData.grabbedModel);
-    controller.userData.grabbedModel = null;
+  state.grippedControllers = state.grippedControllers.filter(c => c !== controller);
+
+  if (state.grippedControllers.length === 0) {
+    if (state.poppedModel) {
+      state.camera.remove(state.poppedModel);
+      state.poppedModel = null;
+    }
   }
 }
 
@@ -124,6 +138,11 @@ export function deselectHotspot() {
   state.selectedHotspot = null;
   updateInfoPanel(null);
   stopSpeaking();
+  if (state.poppedModel) {
+    state.camera.remove(state.poppedModel);
+    state.poppedModel = null;
+  }
+  state.grippedControllers = [];
 }
 
 export function speakText(text) {

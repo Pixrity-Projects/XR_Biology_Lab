@@ -28,11 +28,8 @@ export const state = {
   // Pop-up and zoom state
   selectedHotspot: null,
   prevBButtonPressed: [false, false],
-  prevAButtonPressed: [false, false],
   grippedControllers: [],
-  grabbingController: null,
   poppedModel: null,
-  vrManualMesh: null,
   initialZoomDistance: 0,
   initialPoppedScale: 1.0,
 };
