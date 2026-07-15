@@ -275,14 +275,7 @@ function animate(timestamp, frame) {
 
         // LEFT CONTROLLER: Rotation & Pitch (Standard locomotion rotation)
         if (handedness === 'left') {
-          // Standard locomotion rotation (model rotation via joystick removed)
-          if (Math.abs(axes[2]) > 0.1) {
-            state.userRig.rotation.y -= axes[2] * 1.5 * delta;
-          }
-          if (Math.abs(axes[3]) > 0.1) {
-            state.pitchOffset -= axes[3] * 1.0 * delta;
-            state.pitchOffset = Math.max(-Math.PI / 6, Math.min(Math.PI / 6, state.pitchOffset));
-          }
+          // Left joystick rotation disabled to restrict rotation to physical head tracking
         }
 
         // RIGHT CONTROLLER: Movement
